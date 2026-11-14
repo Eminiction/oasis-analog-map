@@ -136,7 +136,7 @@
 
 <section>
   <h2>3 · The OASIS outpost</h2>
-  <p class="lead">A modular, autonomous base in Bunger Hills, operated remotely and serviced seasonally. It keeps measurements and technology tests running through the polar winter — the same constraints a lunar or Martian base faces: isolation, limited logistics, cold, and no one around to fix failures. Module positions on the Earth map are illustrative.</p>
+  <p class="lead">A modular, autonomous base in Bunger Hills, operated remotely and serviced seasonally. It keeps measurements and technology tests running through the polar winter — the same constraints a lunar or Martian base faces: isolation, limited logistics, cold, and no one around to fix failures. Modules are numbered in deployment order, from the first season onward; positions on the Earth map are illustrative.</p>
   <div class="modules" id="modules"></div>
 </section>
 
@@ -213,12 +213,11 @@ const SITES = {
 
 /* Module offsets from Dobrowolski station (illustrative only) */
 const MODULES = [
-  {n:1, dLat: 0.000, dLng: 0.000, name:"Hub module", d:"Autonomy controller, data storage, fault detection and safe-mode recovery. Runs the base between service visits."},
-  {n:2, dLat:-0.006, dLng: 0.020, name:"Power module", d:"Solar + wind generation with battery storage sized for the dark winter months; loads are prioritised automatically."},
-  {n:3, dLat: 0.004, dLng:-0.018, name:"Thermal & shelter", d:"Insulated, transportable enclosures with heating control and cold-start capability."},
-  {n:4, dLat: 0.010, dLng: 0.012, name:"Communications", d:"Satellite telemetry and remote commanding; local data buffering during link outages."},
-  {n:5, dLat: 0.030, dLng:-0.060, name:"Science: ELF / Schumann", d:"Low-noise electromagnetic sensors placed away from power systems — method relevant to probing other planets' atmospheres."},
-  {n:6, dLat:-0.015, dLng:-0.035, name:"Future: robotics & 3D printing", d:"Expansion module for rover tests and printing structures from regolith simulants."},
+  {n:1, dLat:-0.006, dLng: 0.020, name:"Power source", d:"First to be deployed: solar + wind generation with battery storage sized for the dark winter months; every later module plugs into it and loads are prioritised automatically."},
+  {n:2, dLat: 0.010, dLng: 0.012, name:"Communications", d:"Satellite link for telemetry and remote commanding, so the site can be monitored and operated from Poland; data is buffered locally during link outages."},
+  {n:3, dLat: 0.000, dLng: 0.000, name:"Hub module", d:"Heart of the outpost: autonomy controller, data storage, fault detection and safe-mode recovery, with thermal control. It is also the insulated shelter for the crew during seasonal service visits."},
+  {n:4, dLat: 0.030, dLng:-0.060, name:"Science: ELF / Schumann", d:"Low-noise electromagnetic sensors placed away from power systems — a method relevant to probing other planets' atmospheres — plus other instruments that need year-round data."},
+  {n:5, dLat:-0.015, dLng:-0.035, name:"Future: robotics & 3D printing", d:"Expansion module for rover tests and printing structures from regolith simulants, built on the proven core."},
 ];
 
 /* =========================================================
