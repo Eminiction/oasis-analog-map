@@ -4,7 +4,7 @@
 
 🌍 **Live map:** https://eminiction.github.io/oasis-analog-map/
 
-OASIS identifies and characterizes the **Bunger Hills Oasis** in East Antarctica (~66°S, 100°E) as a terrestrial analog for future bases on the **Moon** and **Mars**. Bunger Hills is one of the largest ice-free areas in Antarctica (~950 km²) with bare rocky hills, ice-covered and saline lakes, extreme cold and very limited access, yet it is far less studied than better-known analogs such as the McMurdo Dry Valleys.
+OASIS identifies and characterizes the **Bunger Hills Oasis** in East Antarctica (66°15′S 100°45′E) as a terrestrial analog for future bases on the **Moon** and **Mars**. Bunger Hills is one of the largest ice-free areas in Antarctica (~950 km²) with bare rocky hills, ice-covered and saline lakes, extreme cold and very limited access, yet it is far less studied than better-known analogs such as the McMurdo Dry Valleys.
 
 The interactive web map puts Bunger Hills next to two planetary sites:
 
