@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OASIS – Bunger Hills Analog Map</title>
+<meta name="description" content="OASIS: Outpost for Antarctic Simulation of Interplanetary Settlements. Interactive analog map comparing Bunger Hills (Antarctica) with the lunar south pole and Jezero Crater (Mars). Code written with assistance of an AI assistant (Claude, Anthropic).">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.2.1/ol.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1020; --panel:#121a30; --line:#24304f; --text:#e6ebf5; --muted:#93a0bd;
+    --earth:#4fb3ff; --moon:#c9ced8; --mars:#ff7a4d; --accent:#7cf0c8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;line-height:1.5}
+  header{padding:28px 24px 12px;max-width:1400px;margin:0 auto}
+  h1{font-family:"Space Grotesk",sans-serif;font-size:clamp(28px,4vw,44px);margin:0;letter-spacing:.5px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);margin:4px 0 0;font-size:15px}
+  h2{font-family:"Space Grotesk",sans-serif;font-size:22px;margin:0 0 6px}
+  section{max-width:1400px;margin:0 auto;padding:16px 24px}
+  .lead{color:var(--muted);max-width:900px;margin:0 0 14px;font-size:15px}
+  .maps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media (max-width:1000px){.maps{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+  .card-h{padding:12px 14px;border-bottom:1px solid var(--line)}
+  .card-h h3{margin:0;font-size:16px;display:flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .card-h p{margin:2px 0 0;color:var(--muted);font-size:13px}
+  .map{height:420px;background:#000}
+  .card-f{padding:10px 14px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
+  .card-f a{color:var(--accent)}
+  .ctrl{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+  .ctrl input{background:#0b1020;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
+  .warn{display:none;color:#ffcf6b;font-size:12px;padding:6px 14px;border-top:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px}
+  td.f{font-weight:600;white-space:nowrap}
+  .score{display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .bar{width:90px;height:8px;background:#1d2742;border-radius:4px;overflow:hidden}
+  .bar i{display:block;height:100%}
+  .src{font-size:12px;color:var(--muted)}
+  .tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:14px 0}
+  @media (max-width:700px){.totals{grid-template-columns:1fr}}
+  .tot{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .tot .big{font-family:"Space Grotesk",sans-serif;font-size:40px;font-weight:700}
+  .tot .lbl{color:var(--muted);font-size:13px}
+  .modules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .mod{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .mod b{display:block;margin-bottom:4px}
+  .mod p{margin:0;color:var(--muted);font-size:13.5px}
+  .note{font-size:12.5px;color:var(--muted)}
+  footer{max-width:1400px;margin:0 auto;padding:20px 24px 40px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line)}
+  footer a{color:var(--accent)}
+  .leaflet-popup-content{font-family:Inter,sans-serif;font-size:13px}
+  .olsel{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .olsel button{background:#0b1020;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font:inherit;font-size:12px;cursor:pointer}
+  .olsel button.on{color:#0b1020;background:var(--moon);border-color:var(--moon)}
+  .olinfo{position:absolute;left:8px;bottom:8px;right:8px;background:rgba(11,16,32,.9);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;display:none;z-index:5}
+  .legend{position:absolute;right:8px;top:8px;background:rgba(11,16,32,.85);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--muted);z-index:5}
+  .legend i{display:inline-block;width:80px;height:8px;background:linear-gradient(90deg,#000,#fff);vertical-align:middle;margin:0 4px}
+  .modicon{background:var(--accent);color:#0b1020;border-radius:50%;font-weight:700;font-size:12px;
+    display:flex;align-items:center;justify-content:center;border:2px solid #0b1020}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>OASIS</span> · Analog Map</h1>
+  <p class="sub">Outpost for Antarctic Simulation of Interplanetary Settlements — Bunger Hills (Antarctica) compared with the lunar south pole and Jezero Crater (Mars). AGH Space Tech Team · NASA Space Apps Challenge 2026</p>
+</header>
+
+<section>
+  <h2>1 · Three worlds, side by side</h2>
+  <p class="lead">Live map layers from NASA's Global Imagery Browse Services (Earth) and NASA Moon Trek / Mars Trek. Use the layer button (top-right of each map) to switch datasets. Markers show candidate sites and the proposed OASIS outpost modules.</p>
+  <div class="maps">
+    <div class="card">
+      <div class="card-h">
+        <h3><span class="dot" style="background:var(--earth)"></span>Earth · Bunger Hills Oasis</h3>
+        <p>~66.2°S, 100.8°E · one of Antarctica's largest ice-free areas</p>
+        <div class="ctrl">MODIS image date
+          <input type="date" id="modisDate" value="2025-01-20" min="2000-03-01">
+          <span>(Antarctic summer: Nov–Feb; try another day if cloudy)</span>
+        </div>
+      </div>
+      <div id="mapEarth" class="map"></div>
+      <div class="warn" id="warnEarth">Some tiles failed to load for this layer — switch layer or change the date.</div>
+      <div class="card-f">Layers: MODIS Terra true colour, ASTER GDEM shaded relief, MODIS land-surface temperature (NASA GIBS); high-resolution basemap (Esri World Imagery).</div>
+    </div>
+    <div class="card">
+      <div class="card-h">
+        <h3><span class="dot" style="background:var(--moon)"></span>Moon · South polar region</h3>
+        <p>Viewed from directly above the pole · water-ice cold traps, low Sun, long shadows</p>
+        <div class="olsel" id="moonSel"></div>
+      </div>
+      <div style="position:relative"><div id="mapMoon" class="map"></div><div class="olinfo" id="moonInfo"></div></div>
+      <div class="warn" id="warnMoon">Some tiles failed to load for this layer — switch layer.</div>
+      <div class="card-f">View from directly above the south pole (polar stereographic). Layers: LRO WAC imagery and LRO LOLA colour-shaded elevation from NASA Moon Trek, re-projected in the browser; use the slider to boost contrast in the dark polar terrain. Click a marker for details. Explore more in <a href="https://trek.nasa.gov/moon/" target="_blank" rel="noopener">Moon Trek</a>.</div>
+    </div>
+    <div class="card">
+      <div class="card-h">
+        <h3><span class="dot" style="background:var(--mars)"></span>Mars · Jezero Crater</h3>
+        <p>~18.4°N, 77.5°E · ancient lake with a river delta</p>
+      </div>
+      <div id="mapMars" class="map"></div>
+      <div class="warn" id="warnMars">Some tiles failed to load for this layer — switch layer.</div>
+      <div class="card-f">Layers: Viking colour mosaic, MGS MOLA colour-shaded elevation (NASA Mars Trek). More detail (CTX, HiRISE) in <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">Mars Trek</a>.</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>2 · Analog score</h2>
+  <p class="lead">How well does Bunger Hills reproduce each condition? 0 = not at all, 5 = very close analog. Scores are the team's assessment based on the listed sources; the factors Antarctica cannot reproduce are included on purpose, so the score stays honest.</p>
+  <div class="totals">
+    <div class="tot"><div class="lbl">Bunger Hills ↔ Moon (south pole)</div><div class="big" id="totMoon" style="color:var(--moon)">–</div><div class="lbl" id="totMoonTxt"></div></div>
+    <div class="tot"><div class="lbl">Bunger Hills ↔ Mars (Jezero Crater)</div><div class="big" id="totMars" style="color:var(--mars)">–</div><div class="lbl" id="totMarsTxt"></div></div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Factor</th><th>Bunger Hills</th><th>Moon · south pole</th><th>Mars · Jezero</th><th>Similarity</th></tr></thead>
+      <tbody id="scoreBody"></tbody>
+    </table>
+  </div>
+  <p class="note">Values marked ≈ are approximate and should be checked against the cited datasets before final use.</p>
+</section>
+
+<section>
+  <h2>3 · The OASIS outpost</h2>
+  <p class="lead">A modular, autonomous base in Bunger Hills, operated remotely and serviced seasonally. It keeps measurements and technology tests running through the polar winter — the same constraints a lunar or Martian base faces: isolation, limited logistics, cold, and no one around to fix failures. Module positions on the Earth map are illustrative.</p>
+  <div class="modules" id="modules"></div>
+</section>
+
+<footer>
+  <p><b>Data &amp; services:</b> NASA GIBS / Worldview (MODIS Terra, ASTER GDEM) · NASA Moon Trek (LRO WAC, LRO LOLA) · NASA Mars Trek (Viking MDIM, MGS MOLA) · Esri World Imagery basemap · Leaflet (BSD-2). Science context: Andersen et al. 1995, <a href="https://ntrs.nasa.gov/citations/19950035178" target="_blank" rel="noopener">NTRS 19950035178</a>; Doran et al. 1996, Antarctic Science 8(3).</p>
+  <p><b>AI use:</b> the code of this page and parts of the text were written with the assistance of an AI assistant (Claude, Anthropic) and reviewed by the team. No AI-generated images are used.</p>
+  <p>This is a student hackathon project and is not affiliated with or endorsed by NASA.</p>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ol@10.2.1/dist/ol.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<script>
+/* =========================================================
+   EDIT HERE: analog scores and module list
+   ========================================================= */
+const FACTORS = [
+  { name:"Surface temperature",
+    earth:"Cold all year; summer near 0 °C, winter well below −20 °C ≈",
+    moon:"Sunlit areas ≈ −50 to −200 °C; permanently shadowed craters < −230 °C (LRO Diviner)",
+    mars:"≈ −80 to 0 °C daily swing at the surface (Perseverance weather data)",
+    sMoon:1, sMars:3, src:"Doran et al. 1996; LRO Diviner; Mars 2020 MEDA" },
+  { name:"Terrain & relief",
+    earth:"Low rounded rocky hills and fault valleys, sea level to 172 m",
+    moon:"Heavily cratered, steep crater walls, high relief",
+    mars:"Crater floor with a sedimentary delta, moderate slopes",
+    sMoon:2, sMars:3, src:"Doran et al. 1996; LRO LOLA; MGS MOLA" },
+  { name:"Surface material",
+    earth:"Bare bedrock and morainic drift, no vegetation",
+    moon:"Fine regolith over impact-shattered rock",
+    mars:"Basaltic rock, olivine, carbonates and clays in the delta",
+    sMoon:2, sMars:3, src:"ASTER GDEM / MODIS imagery; NASA Mars 2020 mission science" },
+  { name:"Water & ice",
+    earth:"Many fresh and saline lakes; some keep ice cover all year",
+    moon:"Water ice trapped in permanently shadowed craters",
+    mars:"Ancient lake basin with river delta (≈ 3.5 billion years ago)",
+    sMoon:3, sMars:5, src:"Andersen et al. 1995 (NTRS) – Bunger lakes studied as analogs of ancient Martian lakes" },
+  { name:"Sunlight cycle",
+    earth:"Just north of the Antarctic Circle: very short winter days, near-continuous summer daylight, low Sun angle",
+    moon:"Sun always near the horizon, long shadows, some near-permanently lit rims",
+    mars:"Regular day–night cycle (sol ≈ 24 h 40 min)",
+    sMoon:3, sMars:2, src:"Site latitudes; LRO illumination studies" },
+  { name:"Isolation & logistics",
+    earth:"≈ 350 km from the nearest operating station; seasonal access only",
+    moon:"No local support; resupply by launch only",
+    mars:"No local support; resupply windows every ~26 months",
+    sMoon:4, sMars:4, src:"Doran et al. 1996" },
+  { name:"Atmosphere & pressure",
+    earth:"Full Earth atmosphere, strong dry katabatic winds",
+    moon:"Essentially vacuum",
+    mars:"Thin CO₂ atmosphere (≈ 0.6 % of Earth's), dust storms",
+    sMoon:0, sMars:1, src:"Standard planetary data" },
+  { name:"Gravity & radiation",
+    earth:"1 g, protected by atmosphere and magnetic field",
+    moon:"0.17 g, no shielding",
+    mars:"0.38 g, thin shielding",
+    sMoon:0, sMars:0, src:"Not reproducible on Earth – must be tested separately" },
+];
+
+const SITES = {
+  earth:[
+    {lat:-66.17, lng:100.88, t:"Bunger Hills Oasis", d:"≈ 950 km² ice-free area: rocky hills, fault valleys and many lakes."},
+    {lat:-66.2748, lng:100.7469, t:"A. B. Dobrowolski Station", d:"Existing (currently inactive) station in the oasis — proposed starting point for the OASIS outpost."},
+  ],
+  moon:[
+    {lat:-89.67, lng:129.8, t:"Shackleton crater (≈)", d:"At the south pole: permanently shadowed interior (possible water ice), while parts of its rim stay sunlit most of the time — a prime base candidate."},
+    {lat:-84.9, lng:-35.5, t:"Cabeus crater (≈)", d:"Site of NASA's LCROSS impact (2009), which detected water in the ejected material."},
+  ],
+  mars:[
+    {lat:18.38, lng:77.58, t:"Jezero Crater", d:"≈ 45 km wide crater that once held a lake, fed by a river that built a delta."},
+    {lat:18.4447, lng:77.4508, t:"Perseverance landing site (≈)", d:"Octavia E. Butler Landing, Mars 2020 (Feb 2021)."},
+  ]
+};
+
+/* Module offsets from Dobrowolski station (illustrative only) */
+const MODULES = [
+  {n:1, dLat: 0.000, dLng: 0.000, name:"Hub module", d:"Autonomy controller, data storage, fault detection and safe-mode recovery. Runs the base between service visits."},
+  {n:2, dLat:-0.006, dLng: 0.020, name:"Power module", d:"Solar + wind generation with battery storage sized for the dark winter months; loads are prioritised automatically."},
+  {n:3, dLat: 0.004, dLng:-0.018, name:"Thermal & shelter", d:"Insulated, transportable enclosures with heating control and cold-start capability."},
+  {n:4, dLat: 0.010, dLng: 0.012, name:"Communications", d:"Satellite telemetry and remote commanding; local data buffering during link outages."},
+  {n:5, dLat: 0.030, dLng:-0.060, name:"Science: ELF / Schumann", d:"Low-noise electromagnetic sensors placed away from power systems — method relevant to probing other planets' atmospheres."},
+  {n:6, dLat:-0.015, dLng:-0.035, name:"Future: robotics & 3D printing", d:"Expansion module for rover tests and printing structures from regolith simulants."},
+];
+
+/* =========================================================
+   Maps
+   ========================================================= */
+function attachWarn(layer, warnId){
+  let errs = 0;
+  layer.on('tileerror', ()=>{ if(++errs > 3) document.getElementById(warnId).style.display='block'; });
+  layer.on('load', ()=>{ errs = 0; });
+}
+function popup(s){ return `<b>${s.t}</b><br>${s.d}`; }
+
+/* ---- Earth: NASA GIBS, Web Mercator ---- */
+const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
+const ATTR_GIBS = 'Imagery: NASA GIBS / EOSDIS';
+const dateEl = document.getElementById('modisDate');
+dateEl.max = new Date(Date.now()-2*864e5).toISOString().slice(0,10);
+const modisUrl = d => `${GIBS}MODIS_Terra_CorrectedReflectance_TrueColor/default/${d}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
+const lstUrl   = d => `${GIBS}MODIS_Terra_Land_Surface_Temp_Day/default/${d}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png`;
+
+const eModis = L.tileLayer(modisUrl(dateEl.value), {maxNativeZoom:9, maxZoom:13, attribution:ATTR_GIBS});
+const eAster = L.tileLayer(`${GIBS}ASTER_GDEM_Color_Shaded_Relief/default/GoogleMapsCompatible_Level12/{z}/{y}/{x}.jpg`, {maxNativeZoom:12, maxZoom:13, attribution:ATTR_GIBS+' (ASTER GDEM, NASA/METI)'});
+const eLst   = L.tileLayer(lstUrl(dateEl.value), {maxNativeZoom:7, maxZoom:13, opacity:0.75, attribution:ATTR_GIBS});
+const eEsri  = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:17, attribution:'Esri World Imagery'});
+[eModis,eAster,eLst,eEsri].forEach(l=>attachWarn(l,'warnEarth'));
+
+const mapEarth = L.map('mapEarth', {layers:[eEsri], zoomSnap:0.5}).setView([-66.2, 100.75], 10);
+L.control.layers(
+  {"High-res imagery (Esri)":eEsri, "MODIS true colour (NASA)":eModis, "ASTER GDEM relief (NASA/METI)":eAster},
+  {"MODIS land-surface temp. (NASA)":eLst}
+).addTo(mapEarth);
+L.control.scale({imperial:false}).addTo(mapEarth);
+SITES.earth.forEach(s=>L.circleMarker([s.lat,s.lng],{radius:7,color:'#4fb3ff',weight:2,fillOpacity:.4}).bindPopup(popup(s)).addTo(mapEarth));
+
+const base = SITES.earth[1];
+const modGroup = L.layerGroup().addTo(mapEarth);
+MODULES.forEach(m=>{
+  const icon = L.divIcon({className:'', html:`<div class="modicon" style="width:22px;height:22px">${m.n}</div>`, iconSize:[22,22], iconAnchor:[11,11]});
+  L.marker([base.lat+m.dLat, base.lng+m.dLng], {icon}).bindPopup(`<b>${m.n}. ${m.name}</b><br>${m.d}<br><i>Illustrative position</i>`).addTo(modGroup);
+});
+
+dateEl.addEventListener('change', ()=>{
+  if(!dateEl.value) return;
+  document.getElementById('warnEarth').style.display='none';
+  eModis.setUrl(modisUrl(dateEl.value));
+  eLst.setUrl(lstUrl(dateEl.value));
+});
+
+/* ---- Moon & Mars: NASA Trek WMTS, equirectangular ---- */
+const trek = (body, layer, ext) => `https://trek.nasa.gov/tiles/${body}/EQ/${layer}/1.0.0/default/default028mm/{z}/{y}/{x}.${ext}`;
+function planetMap(id, warnId, layers, center, zoom, sites, color){
+  const map = L.map(id, {crs:L.CRS.EPSG4326, minZoom:0, maxZoom:10, worldCopyJump:false}).setView(center, zoom);
+  const ls = {};
+  Object.entries(layers).forEach(([name,[url,maxN]],i)=>{
+    const l = L.tileLayer(url,{maxNativeZoom:maxN, maxZoom:10, noWrap:true, attribution:'NASA Trek / JPL'});
+    attachWarn(l,warnId); ls[name]=l; if(i===0) l.addTo(map);
+  });
+  L.control.layers(ls).addTo(map);
+  sites.forEach(s=>L.circleMarker([s.lat,s.lng],{radius:7,color,weight:2,fillOpacity:.4}).bindPopup(popup(s)).addTo(map));
+  return map;
+}
+/* ---- Moon: south pole seen from above ----
+   NASA Moon Trek global mosaics (equirectangular) are re-projected in the browser
+   to a south polar stereographic view with OpenLayers. */
+const MOON_R = 1737400;
+proj4.defs('MOON:GEO', `+proj=longlat +R=${MOON_R} +no_defs`);
+proj4.defs('MOON:SP',  `+proj=stere +lat_0=-90 +lat_ts=-90 +lon_0=0 +x_0=0 +y_0=0 +R=${MOON_R} +units=m +no_defs`);
+const MOON_LAYERS = [
+  ['LRO_WAC_Mosaic_Global_303ppd_v02','Imagery (LRO WAC)','jpg',8],
+  ['LRO_LOLA_ClrShade_Global_128ppd_v04','Elevation (LRO LOLA)','png',7],
+];
+async function initMoonPolar(){
+  ol.proj.proj4.register(proj4);
+  const geo = ol.proj.get('MOON:GEO'); geo.setExtent([-180,-90,180,90]);
+  const sp  = ol.proj.get('MOON:SP');
+  const SPX = 1300000; sp.setExtent([-SPX,-SPX,SPX,SPX]);
+  const res0 = 180/256, resolutions = Array.from({length:12},(_,z)=>res0/2**z);
+  const layers = MOON_LAYERS.map(([id,label,ext,maxZ],i)=>{
+    const src = new ol.source.XYZ({
+      projection:geo, crossOrigin:'anonymous', wrapX:false,
+      tileGrid:new ol.tilegrid.TileGrid({extent:[-180,-90,180,90], origin:[-180,90], resolutions:resolutions.slice(0,maxZ+1), tileSize:256}),
+      url:`https://trek.nasa.gov/tiles/Moon/EQ/${id}/1.0.0/default/default028mm/{z}/{y}/{x}.${ext}`
+    });
+    let errs=0; src.on('tileloaderror',()=>{ if(++errs>6) document.getElementById('warnMoon').style.display='block'; });
+    return {label, layer:new ol.layer.Tile({source:src, visible:i===0, className:'moon-base'})};
+  });
+  const feats = SITES.moon.map(s=>{ const f=new ol.Feature(new ol.geom.Point(ol.proj.transform([s.lng,s.lat],geo,sp))); f.set('site',s); return f; });
+  const markers = new ol.layer.Vector({
+    source:new ol.source.Vector({features:feats}),
+    style:f=>new ol.style.Style({
+      image:new ol.style.Circle({radius:7, fill:new ol.style.Fill({color:'rgba(255,207,107,.45)'}), stroke:new ol.style.Stroke({color:'#ffcf6b',width:2})}),
+      text:new ol.style.Text({text:f.get('site').t, offsetY:-16, font:'600 12px Inter,sans-serif', fill:new ol.style.Fill({color:'#fff'}), stroke:new ol.style.Stroke({color:'#000',width:3})})
+    })
+  });
+  const map = new ol.Map({target:'mapMoon', layers:[...layers.map(l=>l.layer), markers],
+    view:new ol.View({projection:sp, center:[0,0], resolution:900, extent:sp.getExtent(), constrainOnlyCenter:true})});
+  map.addControl(new ol.control.ScaleLine({units:'metric'}));
+
+  const sel = document.getElementById('moonSel');
+  layers.forEach((l,i)=>{
+    const b=document.createElement('button'); b.textContent=l.label; if(i===0) b.className='on';
+    b.onclick=()=>{ layers.forEach((x,j)=>x.layer.setVisible(j===i)); [...sel.querySelectorAll('button')].forEach((c,j)=>c.className=j===i?'on':''); };
+    sel.appendChild(b);
+  });
+  sel.insertAdjacentHTML('beforeend','<label style="display:flex;align-items:center;gap:6px;font-size:12px">Contrast <input type="range" id="moonContrast" min="100" max="300" value="170"></label>');
+  const applyContrast=()=>{ const v=document.getElementById('moonContrast').value;
+    document.querySelectorAll('#mapMoon .moon-base').forEach(el=>el.style.filter=`contrast(${v}%) brightness(${100+(v-100)/3}%)`); };
+  document.getElementById('moonContrast').addEventListener('input',applyContrast);
+  map.once('rendercomplete',applyContrast); setTimeout(applyContrast,500);
+
+  const info=document.getElementById('moonInfo');
+  map.on('singleclick',e=>{ const f=map.forEachFeatureAtPixel(e.pixel,f=>f);
+    if(f){ info.innerHTML=popup(f.get('site')); info.style.display='block'; } else info.style.display='none'; });
+}
+function moonFallback(){
+  document.getElementById('moonSel').innerHTML='<span>Polar view unavailable — showing global map.</span>';
+  planetMap('mapMoon','warnMoon',{
+  "LRO WAC mosaic":[trek('Moon','LRO_WAC_Mosaic_Global_303ppd_v02','jpg'),7],
+  "LRO LOLA colour elevation":[trek('Moon','LRO_LOLA_ClrShade_Global_128ppd_v04','png'),6],
+},[-87,0],4, SITES.moon, '#c9ced8');
+}
+initMoonPolar().catch(e=>{ console.warn(e); document.getElementById('mapMoon').innerHTML=''; moonFallback(); });
+
+planetMap('mapMars','warnMars',{
+  "Viking colour mosaic":[trek('Mars','Mars_Viking_MDIM21_ClrMosaic_global_232m','jpg'),7],
+  "MGS MOLA colour elevation":[trek('Mars','Mars_MGS_MOLA_ClrShade_merge_global_463m','jpg'),6],
+},[18.4,77.5],7, SITES.mars, '#ff7a4d');
+
+/* =========================================================
+   Score table
+   ========================================================= */
+const bar = (v,c)=>`<div class="score"><div class="bar"><i style="width:${v*20}%;background:${c}"></i></div>${v}/5</div>`;
+const tbody = document.getElementById('scoreBody');
+FACTORS.forEach(f=>{
+  tbody.insertAdjacentHTML('beforeend', `<tr>
+    <td class="f">${f.name}</td><td>${f.earth}</td><td>${f.moon}</td><td>${f.mars}</td>
+    <td><div class="src">Moon</div>${bar(f.sMoon,'var(--moon)')}<div class="src" style="margin-top:4px">Mars</div>${bar(f.sMars,'var(--mars)')}<div class="src" style="margin-top:6px">${f.src}</div></td>
+  </tr>`);
+});
+function total(key){
+  const s = FACTORS.reduce((a,f)=>a+f[key],0), max = FACTORS.length*5;
+  return Math.round(100*s/max);
+}
+const best = key => FACTORS.filter(f=>f[key]>=4).map(f=>f.name.toLowerCase()).join(', ') || '—';
+document.getElementById('totMoon').textContent = total('sMoon')+'%';
+document.getElementById('totMars').textContent = total('sMars')+'%';
+document.getElementById('totMoonTxt').textContent = 'Strongest match: '+best('sMoon');
+document.getElementById('totMarsTxt').textContent = 'Strongest match: '+best('sMars');
+
+/* Module cards */
+document.getElementById('modules').innerHTML = MODULES.map(m=>`<div class="mod"><b>${m.n}. ${m.name}</b><p>${m.d}</p></div>`).join('');
+</script>
+</body>
+</html>
