@@ -231,6 +231,7 @@ function attachWarn(layer, warnId){
 function popup(s){ return `<b>${s.t}</b><br>${s.d}`; }
 
 /* ---- Earth: NASA GIBS, Web Mercator ---- */
+const LEAFLET_PREFIX = '<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>';
 const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
 const ATTR_GIBS = 'Imagery: NASA GIBS / EOSDIS';
 const dateEl = document.getElementById('modisDate');
@@ -250,6 +251,7 @@ L.control.layers(
   {"MODIS land-surface temp. (NASA)":eLst}
 ).addTo(mapEarth);
 L.control.scale({imperial:false}).addTo(mapEarth);
+mapEarth.attributionControl.setPrefix(LEAFLET_PREFIX);
 SITES.earth.forEach(s=>L.circleMarker([s.lat,s.lng],{radius:7,color:'#2E96F5',weight:2,fillOpacity:.4}).bindPopup(popup(s)).addTo(mapEarth));
 
 const base = SITES.earth[1];
@@ -276,6 +278,7 @@ function planetMap(id, warnId, layers, center, zoom, sites, color){
     attachWarn(l,warnId); ls[name]=l; if(i===0) l.addTo(map);
   });
   L.control.layers(ls).addTo(map);
+  map.attributionControl.setPrefix(LEAFLET_PREFIX);
   sites.forEach(s=>L.circleMarker([s.lat,s.lng],{radius:7,color,weight:2,fillOpacity:.4}).bindPopup(popup(s)).addTo(map));
   return map;
 }
