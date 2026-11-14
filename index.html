@@ -88,11 +88,12 @@
         <p>~66.2°S, 100.8°E · one of Antarctica's largest ice-free areas</p>
         <div class="ctrl">MODIS image date
           <input type="date" id="modisDate" value="2025-01-20" min="2000-03-01">
-          <span>(Antarctic summer: Nov–Feb; try another day if cloudy)</span>
+          <button id="clearBtn" style="background:var(--yellow);color:var(--deep);border:0;border-radius:6px;padding:4px 10px;font:inherit;font-weight:700;cursor:pointer">Find clear day</button>
+          <span>(changes the MODIS layers; data from 2000 to a few days ago. Best: Nov–Feb, try another day if cloudy)</span>
         </div>
       </div>
       <div id="mapEarth" class="map"></div>
-      <div class="warn" id="warnEarth">Some tiles failed to load for this layer — switch layer or change the date.</div>
+      <div class="warn" id="warnEarth">Some image tiles are missing for this date or layer — try another date or layer.</div>
       <div class="card-f">Layers: MODIS Terra true colour, ASTER GDEM shaded relief, MODIS land-surface temperature (NASA GIBS); high-resolution basemap (Esri World Imagery).</div>
     </div>
     <div class="card">
@@ -225,8 +226,13 @@ const MODULES = [
    ========================================================= */
 function attachWarn(layer, warnId){
   let errs = 0;
-  layer.on('tileerror', ()=>{ if(++errs > 3) document.getElementById(warnId).style.display='block'; });
-  layer.on('load', ()=>{ errs = 0; });
+  const warn = ()=>document.getElementById(warnId);
+  layer.on('tileerror', e=>{
+    // retry each failed tile once (NASA servers sometimes drop single requests)
+    if(e.tile && !e.tile._retried){ e.tile._retried = true; const u=e.tile.src; setTimeout(()=>{ e.tile.src = u + (u.includes('?')?'&':'?') + 'r=' + Date.now(); }, 400); return; }
+    if(++errs > 6) warn().style.display='block';
+  });
+  layer.on('load add', ()=>{ errs = 0; warn().style.display='none'; });
 }
 function popup(s){ return `<b>${s.t}</b><br>${s.d}`; }
 
@@ -261,11 +267,46 @@ MODULES.forEach(m=>{
   L.marker([base.lat+m.dLat, base.lng+m.dLng], {icon}).bindPopup(`<b>${m.n}. ${m.name}</b><br>${m.d}<br><i>Illustrative position</i>`).addTo(modGroup);
 });
 
+/* Find a clear MODIS day: scan last Antarctic summer and pick the day where most
+   dark (bare rock) pixels are visible over Bunger Hills, i.e. fewest clouds. */
+function tileXY(lat,lng,z){ const n=2**z, x=Math.floor((lng+180)/360*n), r=lat*Math.PI/180;
+  return [x, Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n)]; }
+function darkShare(date){
+  return new Promise(res=>{
+    const [x,y]=tileXY(-66.25,100.8,8), img=new Image(); img.crossOrigin='anonymous';
+    img.onload=()=>{ try{ const c=document.createElement('canvas'); c.width=c.height=256; const g=c.getContext('2d');
+        g.drawImage(img,0,0); const d=g.getImageData(0,0,256,256).data; let dark=0, black=0;
+        for(let i=0;i<d.length;i+=4){ const v=(d[i]+d[i+1]+d[i+2])/3; if(v<8) black++; else if(v<110) dark++; }
+        res(black>20000 ? 0 : dark/65536); }catch(e){ res(0); } };
+    img.onerror=()=>res(0);
+    img.src=modisUrl(date).replace('{z}',8).replace('{y}',y).replace('{x}',x);
+  });
+}
+async function findClearDay(silent){
+  const btn=document.getElementById('clearBtn'); btn.disabled=true; btn.textContent='Searching…';
+  const now=new Date(), y=now.getUTCMonth()>=2 ? now.getUTCFullYear() : now.getUTCFullYear()-1;
+  const dates=[]; for(let t=Date.UTC(y-1,11,1); t<=Date.UTC(y,1,20); t+=3*864e5) dates.push(new Date(t).toISOString().slice(0,10));
+  const scores=await Promise.all(dates.map(darkShare));
+  let bi=0; scores.forEach((v,i)=>{ if(v>scores[bi]) bi=i; });
+  btn.disabled=false; btn.textContent='Find clear day';
+  if(scores[bi]>0){ dateEl.value=dates[bi];
+    if(silent){ eModis.setUrl(modisUrl(dateEl.value)); eLst.setUrl(lstUrl(dateEl.value)); }
+    else dateEl.dispatchEvent(new Event('change')); }
+}
+document.getElementById('clearBtn').addEventListener('click', ()=>findClearDay(false));
+findClearDay(true); // pick a clear default date in the background
+
 dateEl.addEventListener('change', ()=>{
   if(!dateEl.value) return;
   document.getElementById('warnEarth').style.display='none';
   eModis.setUrl(modisUrl(dateEl.value));
   eLst.setUrl(lstUrl(dateEl.value));
+  // the date only applies to the MODIS layers, so switch to MODIS true colour automatically
+  if(!mapEarth.hasLayer(eModis)){
+    [eEsri,eAster].forEach(l=>mapEarth.removeLayer(l));
+    eModis.addTo(mapEarth); eModis.bringToBack();
+  }
+  if(mapEarth.getZoom()>9) mapEarth.setZoom(9);
 });
 
 /* ---- Moon & Mars: NASA Trek WMTS, equirectangular ---- */
