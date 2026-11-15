@@ -21,7 +21,7 @@ The interactive web map puts Bunger Hills next to two planetary sites:
    - **Show/hide** the OASIS module and site markers.
    - **Download image:** saves the current Bunger Hills view as a PNG with a scale bar, the data layer, the date and the credits, with or without the OASIS modules.
 2. **Analog score**: 8 factors (temperature, terrain, surface material, water & ice, sunlight cycle, isolation, atmosphere, gravity & radiation), each scored 0–5 for how well Bunger Hills reproduces Moon and Mars conditions, with sources. Factors that Antarctica cannot reproduce are included on purpose so the score stays honest.
-3. **OASIS outpost concept**: a modular, autonomous base in Bunger Hills deployed in this order: (1) power source, (2) communications, (3) hub module with the crew shelter for service visits, (4) science incl. ELF/Schumann-resonance sensors, (5) future robotics and regolith 3D printing. It is operated remotely and serviced seasonally. Module positions on the map are illustrative.
+3. **OASIS outpost concept**: a modular, autonomous base in Bunger Hills deployed in this order: (1) power source, (2) communications, (3) hub module with the crew shelter for service visits, (4) ELF/Schumann science, (5) robotics & 3D printing (incl. printing from regolith simulants). It is operated remotely and serviced seasonally. Module positions on the map are illustrative.
 
 ## Data sources
 
