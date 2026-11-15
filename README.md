@@ -17,7 +17,7 @@ The interactive web map puts Bunger Hills next to two planetary sites:
 ## Features
 
 1. **Three linked maps**: NASA satellite and orbital data for each site. The Moon is shown from directly above the south pole (polar stereographic view, re-projected in the browser), with a contrast control for the dark polar terrain.
-   - **Bunger Hills tools:** pick any MODIS image date (2000 to a few days ago) or use **Find clear day**, which scans the last Antarctic summer and picks the least cloudy day automatically.
+   - **Bunger Hills tools:** pick any MODIS image date (2000 to a few days ago) and use **Find clear day**, which checks every day within ±15 days of the chosen date (or the last 30 days for very recent dates), skips missing-data and polar-night images, and picks the least cloudy one.
    - **Show/hide** the OASIS module and site markers.
    - **Download image:** saves the current Bunger Hills view as a PNG with a scale bar, the data layer, the date and the credits, with or without the OASIS modules.
 2. **Analog score**: 8 factors (temperature, terrain, surface material, water & ice, sunlight cycle, isolation, atmosphere, gravity & radiation), each scored 0–5 for how well Bunger Hills reproduces Moon and Mars conditions, with sources. Factors that Antarctica cannot reproduce are included on purpose so the score stays honest.

@@ -89,13 +89,14 @@
         <div class="ctrl">MODIS image date
           <input type="date" id="modisDate" value="2025-01-20" min="2000-03-01">
           <button id="clearBtn" style="background:var(--yellow);color:var(--deep);border:0;border-radius:6px;padding:4px 10px;font:inherit;font-weight:700;cursor:pointer">Find clear day</button>
+          <span id="clearMsg"></span>
         </div>
         <div class="ctrl">
           <label><input type="checkbox" id="showModules" checked> OASIS modules</label>
           <label><input type="checkbox" id="showSites" checked> Site markers</label>
           <button id="dlBtn" style="background:var(--yonder);color:var(--white);border:0;border-radius:6px;padding:4px 10px;font:inherit;font-weight:700;cursor:pointer">⬇ Download image</button>
           <span id="dlMsg"></span>
-          <span>(changes the MODIS layers; data from 2000 to a few days ago. Best: Nov–Feb, try another day if cloudy)</span>
+          <span>(changes the MODIS layers; data from 2000 to a few days ago. Best: Nov–Feb. "Find clear day" picks the clearest day within ±15 days of the chosen date)</span>
         </div>
       </div>
       <div id="mapEarth" class="map"></div>
@@ -247,6 +248,8 @@ const GIBS = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
 const ATTR_GIBS = 'Imagery: NASA GIBS / EOSDIS';
 const dateEl = document.getElementById('modisDate');
 dateEl.max = new Date(Date.now()-2*864e5).toISOString().slice(0,10);
+{ const now=new Date(), y = now.getUTCMonth()>=2 ? now.getUTCFullYear() : now.getUTCFullYear()-1;
+  dateEl.value = `${y}-01-15`; }  // middle of the most recent Antarctic summer
 const modisUrl = d => `${GIBS}MODIS_Terra_CorrectedReflectance_TrueColor/default/${d}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg`;
 const lstUrl   = d => `${GIBS}MODIS_Terra_Land_Surface_Temp_Day/default/${d}/GoogleMapsCompatible_Level7/{z}/{y}/{x}.png`;
 
@@ -278,26 +281,45 @@ MODULES.forEach(m=>{
 function tileXY(lat,lng,z){ const n=2**z, x=Math.floor((lng+180)/360*n), r=lat*Math.PI/180;
   return [x, Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n)]; }
 function darkShare(date){
+  // Share of dark (bare rock) pixels in the MODIS tile over Bunger Hills.
+  // Returns 0 for unusable images: missing data (black) or polar-night / dusk images (no bright ice).
   return new Promise(res=>{
     const [x,y]=tileXY(-66.25,100.8,8), img=new Image(); img.crossOrigin='anonymous';
     img.onload=()=>{ try{ const c=document.createElement('canvas'); c.width=c.height=256; const g=c.getContext('2d');
-        g.drawImage(img,0,0); const d=g.getImageData(0,0,256,256).data; let dark=0, black=0;
-        for(let i=0;i<d.length;i+=4){ const v=(d[i]+d[i+1]+d[i+2])/3; if(v<8) black++; else if(v<110) dark++; }
-        res(black>20000 ? 0 : dark/65536); }catch(e){ res(0); } };
+        g.drawImage(img,0,0); const d=g.getImageData(0,0,256,256).data; let dark=0, black=0, bright=0;
+        for(let i=0;i<d.length;i+=4){ const v=(d[i]+d[i+1]+d[i+2])/3; if(v<8) black++; else if(v<110) dark++; else if(v>180) bright++; }
+        const n=65536;
+        res(black/n>0.3 || bright/n<0.2 ? 0 : dark/n); }catch(e){ res(0); } };
     img.onerror=()=>res(0);
     img.src=modisUrl(date).replace('{z}',8).replace('{y}',y).replace('{x}',x);
   });
 }
+const DAY=864e5, iso=t=>new Date(t).toISOString().slice(0,10);
+function searchWindow(center){
+  // 31 days around the chosen date (15 before + 15 after); shifted back if the window
+  // would reach past the newest available image, or forward if before March 2000.
+  const minT=Date.parse(dateEl.min), maxT=Date.parse(dateEl.max);
+  let c=Date.parse(center); if(isNaN(c)) c=maxT;
+  let a=c-15*DAY, b=c+15*DAY;
+  if(b>maxT){ b=maxT; a=b-30*DAY; }
+  if(a<minT){ a=minT; b=Math.min(maxT,a+30*DAY); }
+  const out=[]; for(let t=a;t<=b;t+=DAY) out.push(iso(t));
+  return {dates:out, center:c};
+}
 async function findClearDay(silent){
-  const btn=document.getElementById('clearBtn'); btn.disabled=true; btn.textContent='Searching…';
-  const now=new Date(), y=now.getUTCMonth()>=2 ? now.getUTCFullYear() : now.getUTCFullYear()-1;
-  const dates=[]; for(let t=Date.UTC(y-1,11,1); t<=Date.UTC(y,1,20); t+=3*864e5) dates.push(new Date(t).toISOString().slice(0,10));
+  const btn=document.getElementById('clearBtn'), msg=document.getElementById('clearMsg');
+  btn.disabled=true; btn.textContent='Searching…'; msg.textContent='';
+  const {dates, center}=searchWindow(dateEl.value);
   const scores=await Promise.all(dates.map(darkShare));
-  let bi=0; scores.forEach((v,i)=>{ if(v>scores[bi]) bi=i; });
+  // best = most visible rock; small preference for days closer to the chosen date
+  let bi=-1, best=0;
+  scores.forEach((v,i)=>{ if(v<=0) return; const adj=v-0.0004*Math.abs(Date.parse(dates[i])-center)/DAY; if(bi<0||adj>best){ best=adj; bi=i; } });
   btn.disabled=false; btn.textContent='Find clear day';
-  if(scores[bi]>0){ dateEl.value=dates[bi];
-    if(silent){ eModis.setUrl(modisUrl(dateEl.value)); eLst.setUrl(lstUrl(dateEl.value)); }
-    else dateEl.dispatchEvent(new Event('change')); }
+  if(bi<0){ msg.textContent=`No usable images between ${dates[0]} and ${dates[dates.length-1]} (polar night or no data). Try a date between November and February.`; return; }
+  msg.textContent=`Clearest day between ${dates[0]} and ${dates[dates.length-1]}: ${dates[bi]}`;
+  dateEl.value=dates[bi];
+  if(silent){ eModis.setUrl(modisUrl(dateEl.value)); eLst.setUrl(lstUrl(dateEl.value)); }
+  else dateEl.dispatchEvent(new Event('change'));
 }
 document.getElementById('clearBtn').addEventListener('click', ()=>findClearDay(false));
 findClearDay(true); // pick a clear default date in the background
