@@ -2,6 +2,8 @@
 
 **AGH Space Tech Team · NASA Space Apps Challenge 2026**
 
+**Challenge:** Identify Earth Locations that Analog the Permanent Moon Base Locations and Mars
+
 🌍 **Live map:** https://eminiction.github.io/oasis-analog-map/
 
 OASIS identifies and characterizes the **Bunger Hills Oasis** in East Antarctica (66°15′S 100°45′E) as a terrestrial analog for future bases on the **Moon** and **Mars**. Bunger Hills is one of the largest ice-free areas in Antarctica (~950 km²) with bare rocky hills, ice-covered and saline lakes, extreme cold and very limited access, yet it is far less studied than better-known analogs such as the McMurdo Dry Valleys.
@@ -20,7 +22,7 @@ The interactive web map puts Bunger Hills next to two planetary sites:
    - **Bunger Hills tools:** pick any MODIS image date (2000 to a few days ago) and use **Find clear day**, which checks every day within ±15 days of the chosen date (or the last 30 days for very recent dates), skips missing-data and polar-night images, and picks the least cloudy one.
    - **Show/hide** the OASIS module and site markers.
    - **Download image:** saves the current Bunger Hills view as a PNG with a scale bar, the data layer, the date and the credits, with or without the OASIS modules.
-2. **Analog score**: 8 factors (temperature, terrain, surface material, water & ice, sunlight cycle, isolation, atmosphere, gravity & radiation), each scored 0–5 for how well Bunger Hills reproduces Moon and Mars conditions, with sources. Factors that Antarctica cannot reproduce are included on purpose so the score stays honest.
+2. **Analog score**: 7 factors (temperature, terrain, surface material, sunlight cycle, isolation, atmosphere, gravity & radiation), each scored 0–5 for how well Bunger Hills reproduces Moon and Mars conditions, with sources. Factors that Antarctica cannot reproduce are included on purpose so the score stays honest.
 3. **OASIS outpost concept**: a modular, autonomous base in Bunger Hills deployed in this order: (1) power source, (2) communications, (3) hub module with the crew shelter for service visits, (4) ELF/Schumann science, (5) robotics & 3D printing (incl. printing from regolith simulants). It is operated remotely and serviced seasonally. Module positions on the map are illustrative.
 
 ## Data sources
@@ -50,9 +52,9 @@ No installation is needed. Download `index.html` and open it in a browser (an in
 
 The scores, site markers and outpost modules are plain data lists at the top of the script in `index.html` (`FACTORS`, `SITES`, `MODULES`) and can be edited directly.
 
-## Use of AI
+## Use of Super Intelligence (SI)
 
-The code in `index.html` and parts of the descriptive text (including this README) were written with the assistance of an AI assistant (Claude, Anthropic) and reviewed and adjusted by the team. Site selection, the outpost concept and the analog assessment are the team's own work. No AI-generated images, audio or video are used.
+The code in `index.html` and parts of the descriptive text (including this README) were written with the assistance of a Super Intelligence (SI) tool (Claude, Anthropic) and reviewed and adjusted by the team. Site selection, the outpost concept and the analog assessment are the team's own work. No SI-generated images, audio or video are used.
 
 ## Team
 
