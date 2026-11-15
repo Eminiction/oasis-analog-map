@@ -366,11 +366,25 @@ async function exportEarth(){
   const msg = document.getElementById('dlMsg'); msg.textContent = 'Preparing…';
   try{
     const el = mapEarth.getContainer(), box = el.getBoundingClientRect();
-    const W = Math.round(box.width), H = Math.round(box.height), BAR = 64, dpr = Math.min(window.devicePixelRatio||1, 2);
+    const W = Math.round(box.width), H = Math.round(box.height), dpr = Math.min(window.devicePixelRatio||1, 2);
+    const layers = activeEarthLayers();
+    // caption text, wrapped to the image width so nothing is cut off on narrow screens
+    const dated = layers.some(([,,k])=>k==='modis'||k==='lst');
+    const credit = layers.some(([,,k])=>k==='esri') ? 'Imagery: Esri, Maxar, Earthstar Geographics, GIS User Community' : 'Imagery: NASA GIBS / EOSDIS';
+    const mg = document.createElement('canvas').getContext('2d'), maxW = W - 24;
+    const wrap = (text, font) => { mg.font = font; const out=[]; let line='';
+      for(const w of text.split(' ')){ const t = line ? line+' '+w : w;
+        if(mg.measureText(t).width > maxW && line){ out.push(line); line = w; } else line = t; }
+      if(line) out.push(line); return out; };
+    const CAP = [
+      ['OASIS · Bunger Hills Oasis, Antarctica (66°15′S 100°45′E)', '900 16px "Fira Sans", sans-serif', '#EAFE07', 20],
+      [layers.map(([,n])=>n).join(' + ') + (dated ? ` · ${dateEl.value}` : ''), '400 12px Overpass, sans-serif', '#ffffff', 16],
+      [credit + (showModules.checked ? ' · OASIS module positions illustrative' : '') + ' · AGH Space Tech Team', '400 10.5px Overpass, sans-serif', '#b8c7e6', 14],
+    ].flatMap(([t,f,c,lh]) => wrap(t,f).map(l=>[l,f,c,lh]));
+    const BAR = 14 + CAP.reduce((a,[, , ,lh])=>a+lh, 0);
     const c = document.createElement('canvas'); c.width = W*dpr; c.height = (H+BAR)*dpr;
     const g = c.getContext('2d'); g.scale(dpr,dpr);
     g.fillStyle = '#07173F'; g.fillRect(0,0,W,H+BAR);
-    const layers = activeEarthLayers();
     // 1) map tiles, layer by layer, zoom levels in drawing order
     for(const [layer] of layers){
       const cont = layer.getContainer(); if(!cont) continue;
@@ -408,15 +422,9 @@ async function exportEarth(){
     g.fillStyle='rgba(255,255,255,.85)'; g.fillRect(12,H-30,px+8,20);
     g.fillStyle='#07173F'; g.fillRect(16,H-16,px,3); g.font='700 11px Overpass, sans-serif'; g.fillText(`${nice/1000} km`,18,H-19);
     // 4) caption bar
-    const dated = layers.some(([,,k])=>k==='modis'||k==='lst');
     g.fillStyle='#07173F'; g.fillRect(0,H,W,BAR);
-    g.fillStyle='#EAFE07'; g.font='900 16px "Fira Sans", sans-serif';
-    g.fillText('OASIS · Bunger Hills Oasis, Antarctica (66°15′S 100°45′E)', 12, H+22);
-    g.fillStyle='#ffffff'; g.font='400 12px Overpass, sans-serif';
-    g.fillText(layers.map(([,n])=>n).join(' + ') + (dated ? ` · ${dateEl.value}` : ''), 12, H+40);
-    g.fillStyle='#b8c7e6'; g.font='400 10.5px Overpass, sans-serif';
-    const credit = layers.some(([,,k])=>k==='esri') ? 'Imagery: Esri, Maxar, Earthstar Geographics, GIS User Community' : 'Imagery: NASA GIBS / EOSDIS';
-    g.fillText(credit + (showModules.checked ? ' · OASIS module positions illustrative' : '') + ' · AGH Space Tech Team', 12, H+56);
+    let cy = H + 6;
+    for(const [t,f,c,lh] of CAP){ cy += lh; g.font=f; g.fillStyle=c; g.fillText(t, 12, cy-4); }
     // 5) save
     const name = `oasis_bunger_${layers.map(([,,k])=>k).join('-')}${dated?'_'+dateEl.value:''}${showModules.checked?'_modules':''}.png`;
     const blob = await new Promise(r=>c.toBlob(r,'image/png'));
